@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Przewidywanie Cen Mieszkań</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        select, input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .row {
+            display: flex;
+            gap: 20px;
+        }
+        .col {
+            flex: 1;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+            display: none;
+        }
+        .price {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .chart-container {
+            margin-top: 20px;
+            height: 300px;
+        }
+        .features {
+            margin-top: 20px;
+        }
+        .feature-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .feature-value {
+            font-weight: 600;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .error {
+            color: #e74c3c;
+            text-align: center;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Przewidywanie Cen Mieszkań</h1>
+        
+        <form id="predictionForm">
+            <div class="row">
+                <div class="col">
+                    <div class="form-group">
+                        <label for="city">Miasto:</label>
+                        <select id="city" name="city" required>
+                            <option value="">Wybierz miasto</option>
+                            <option value="warszawa">Warszawa</option>
+                            <option value="krakow">Kraków</option>
+                            <option value="wroclaw">Wrocław</option>
+                            <option value="poznan">Poznań</option>
+                            <option value="gdansk">Gdańsk</option>
+                            <option value="lodz">Łódź</option>
+                            <option value="katowice">Katowice</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="form-group">
+                        <label for="district">Dzielnica:</label>
+                        <select id="district" name="district" required>
+                            <option value="">Najpierw wybierz miasto</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col">
+                    <div class="form-group">
+                        <label for="area">Powierzchnia (m²):</label>
+                        <input type="number" id="area" name="area" min="10" max="500" required>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="form-group">
+                        <label for="rooms">Liczba pokoi:</label>
+                        <select id="rooms" name="rooms" required>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5+</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col">
+                    <div class="form-group">
+                        <label for="floor">Piętro:</label>
+                        <select id="floor" name="floor" required>
+                            <option value="0">Parter</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5+</option>
+                            <option value="-1">Podziemne</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="form-group">
+                        <label for="buildYear">Rok budowy:</label>
+                        <input type="number" id="buildYear" name="buildYear" min="1900" max="2023" required>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col">
+                    <div class="form-group">
+                        <label for="condition">Stan:</label>
+                        <select id="condition" name="condition" required>
+                            <option value="nowe">Nowe</option>
+                            <option value="bardzo_dobry">Bardzo dobry</option>
+                            <option value="dobry">Dobry</option>
+                            <option value="do_remontu">Do remontu</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="form-group">
+                        <label for="type">Typ budynku:</label>
+                        <select id="type" name="type" required>
+                            <option value="blok">Blok</option>
+                            <option value="kamienica">Kamienica</option>
+                            <option value="apartamentowiec">Apartamentowiec</option>
+                            <option value="dom_wielorodzinny">Dom wielorodzinny</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Dodatkowe udogodnienia:</label>
+                <div class="row">
+                    <div class="col">
+                        <input type="checkbox" id="balcony" name="balcony" value="1">
+                        <label for="balcony" style="display: inline;">Balkon</label>
+                    </div>
+                    <div class="col">
+                        <input type="checkbox" id="parking" name="parking" value="1">
+                        <label for="parking" style="display: inline;">Miejsce parkingowe</label>
+                    </div>
+                    <div class="col">
+                        <input type="checkbox" id="elevator" name="elevator" value="1">
+                        <label for="elevator" style="display: inline;">Winda</label>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit">Przewiduj cenę</button>
+        </form>
+        
+        <div class="loading">Obliczanie przewidywanej ceny...</div>
+        <div class="error">Wystąpił błąd podczas przewidywania ceny. Spróbuj ponownie.</div>
+        
+        <div class="result">
+            <h2>Wynik przewidywania</h2>
+            <div class="price" id="predictedPrice">0 PLN</div>
+            
+            <div class="features">
+                <h3>Wpływ czynników na cenę:</h3>
+                <div class="chart-container">
+                    <canvas id="featuresChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Słownik z dzielnicami dla każdego miasta
+        const districts = {
+            warszawa: ["Mokotów", "Śródmieście", "Wola", "Ursynów", "Praga Południe", "Bemowo", "Bielany"],
+            krakow: ["Stare Miasto", "Krowodrza", "Podgórze", "Nowa Huta", "Dębniki", "Prądnik Biały"],
+            wroclaw: ["Stare Miasto", "Krzyki", "Śródmieście", "Fabryczna", "Psie Pole"],
+            poznan: ["Stare Miasto", "Grunwald", "Wilda", "Jeżyce", "Nowe Miasto"],
+            gdansk: ["Śródmieście", "Wrzeszcz", "Oliwa", "Przymorze", "Zaspa"],
+            lodz: ["Śródmieście", "Bałuty", "Widzew", "Polesie", "Górna"],
+            katowice: ["Śródmieście", "Brynów", "Ligota", "Załęże", "Osiedle Tysiąclecia"]
+        };
+
+        // Aktualizacja listy dzielnic po wyborze miasta
+        document.getElementById('city').addEventListener('change', function() {
+            const cityValue = this.value;
+            const districtSelect = document.getElementById('district');
+            
+            // Wyczyść obecne opcje
+            districtSelect.innerHTML = '';
+            
+            if (!cityValue) {
+                districtSelect.innerHTML = '<option value="">Najpierw wybierz miasto</option>';
+                return;
+            }
+            
+            // Dodaj nowe opcje bazując na wybranym mieście
+            const cityDistricts = districts[cityValue] || [];
+            cityDistricts.forEach(district => {
+                const option = document.createElement('option');
+                option.value = district.toLowerCase().replace(' ', '_');
+                option.textContent = district;
+                districtSelect.appendChild(option);
+            });
+            
+            // Dodaj opcję "Inna"
+            const otherOption = document.createElement('option');
+            otherOption.value = "inna";
+            otherOption.textContent = "Inna";
+            districtSelect.appendChild(otherOption);
+        });
+
+        // Obsługa formularza
+        document.getElementById('predictionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Pokaż ładowanie
+            document.querySelector('.loading').style.display = 'block';
+            document.querySelector('.error').style.display = 'none';
+            document.querySelector('.result').style.display = 'none';
+            
+            // Zbierz dane z formularza
+            const formData = new FormData(this);
+            const data = {};
+            for (const [key, value] of formData.entries()) {
+                data[key] = value;
+            }
+            
+            // Dodaj wartości dla checkboxów
+            data.balcony = document.getElementById('balcony').checked ? 1 : 0;
+            data.parking = document.getElementById('parking').checked ? 1 : 0;
+            data.elevator = document.getElementById('elevator').checked ? 1 : 0;
+            
+            // Wywołaj API backendu
+            fetch('/api/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Błąd serwera');
+                }
+                return response.json();
+            })
+            .then(result => {
+                // Ukryj ładowanie
+                document.querySelector('.loading').style.display = 'none';
+                
+                // Wyświetl wynik
+                document.getElementById('predictedPrice').textContent = 
+                    new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(result.price);
+                
+                document.querySelector('.result').style.display = 'block';
+                
+                // Wyświetl wykres wpływu czynników
+                renderFeaturesChart(result.feature_importance);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.querySelector('.loading').style.display = 'none';
+                document.querySelector('.error').style.display = 'block';
+            });
+        });
+
+        // Renderowanie wykresu
+        function renderFeaturesChart(featureImportance) {
+            const ctx = document.getElementById('featuresChart').getContext('2d');
+            
+            // Sortuj cechy według ich wpływu
+            const sortedFeatures = Object.entries(featureImportance)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 8); // Bierzemy 8 najważniejszych cech
+            
+            // Przygotuj dane do wykresu
+            const labels = sortedFeatures.map(item => {
+                // Tłumacz nazwy cech na język polski
+                const translations = {
+                    area: 'Powierzchnia',
+                    city: 'Miasto',
+                    district: 'Dzielnica',
+                    rooms: 'Liczba pokoi',
+                    floor: 'Piętro',
+                    buildYear: 'Rok budowy',
+                    condition: 'Stan',
+                    type: 'Typ budynku',
+                    balcony: 'Balkon',
+                    parking: 'Miejsce parkingowe',
+                    elevator: 'Winda'
+                };
+                return translations[item[0]] || item[0];
+            });
+            
+            const data = sortedFeatures.map(item => item[1]);
+            
+            // Stwórz wykres
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Wpływ na cenę (%)',
+                        data: data,
+                        backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Wpływ: ${context.raw.toFixed(2)}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Wpływ na cenę (%)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
